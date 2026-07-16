@@ -1,7 +1,7 @@
-smtp:
-  host: smtp.qq.com
-  port: "587"
-  sender_email: xxx@qq.com
-  sender_password: QQ邮箱授权码
-
-receiver_email: 接收邮箱@xxx.com
+email:
+  enabled: true
+  from: "768305875@qq.com"
+  to: "768305875@qq.com"
+  auth_code: "gpfruabgjebubdad"
+  smtp_server: "smtp.qq.com"
+  smtp_port: 587

@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"net"
 	"net/smtp"
 	"os"
 	"strings"
@@ -12,13 +13,14 @@ import (
 )
 
 type Config struct {
-	SMTP struct {
-		Host           string `yaml:"host"`
-		Port           string `yaml:"port"`
-		SenderEmail    string `yaml:"sender_email"`
-		SenderPassword string `yaml:"sender_password"`
-	} `yaml:"smtp"`
-	ReceiverEmail string `yaml:"receiver_email"`
+	Email struct {
+		Enabled    bool   `yaml:"enabled"`
+		From       string `yaml:"from"`
+		To         string `yaml:"to"`
+		AuthCode   string `yaml:"auth_code"`
+		SMTPServer string `yaml:"smtp_server"`
+		SMTPPort   int    `yaml:"smtp_port"`
+	} `yaml:"email"`
 }
 
 func loadConfig(path string) (*Config, error) {
@@ -37,19 +39,62 @@ func loadConfig(path string) (*Config, error) {
 }
 
 func sendMail(config *Config, subject, body string) error {
-	auth := smtp.PlainAuth("", config.SMTP.SenderEmail, config.SMTP.SenderPassword, config.SMTP.Host)
+	if !config.Email.Enabled {
+		return nil
+	}
+
+	auth := smtp.PlainAuth("", config.Email.From, config.Email.AuthCode, config.Email.SMTPServer)
 
 	msg := strings.Join([]string{
-		"From: 路由器测速 <" + config.SMTP.SenderEmail + ">",
-		"To: " + config.ReceiverEmail,
+		"From: 路由器测速 <" + config.Email.From + ">",
+		"To: " + config.Email.To,
 		"Subject: " + subject,
 		"Content-Type: text/plain; charset=utf-8",
 		"",
 		body,
 	}, "\r\n")
 
-	addr := fmt.Sprintf("%s:%s", config.SMTP.Host, config.SMTP.Port)
-	return smtp.SendMail(addr, auth, config.SMTP.SenderEmail, []string{config.ReceiverEmail}, []byte(msg))
+	addr := fmt.Sprintf("%s:%d", config.Email.SMTPServer, config.Email.SMTPPort)
+
+	conn, err := net.Dial("tcp", addr)
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+
+	client, err := smtp.NewClient(conn, config.Email.SMTPServer)
+	if err != nil {
+		return err
+	}
+
+	if err = client.Auth(auth); err != nil {
+		return err
+	}
+
+	if err = client.Mail(config.Email.From); err != nil {
+		return err
+	}
+
+	if err = client.Rcpt(config.Email.To); err != nil {
+		return err
+	}
+
+	w, err := client.Data()
+	if err != nil {
+		return err
+	}
+
+	_, err = w.Write([]byte(msg))
+	if err != nil {
+		return err
+	}
+
+	err = w.Close()
+	if err != nil {
+		return err
+	}
+
+	return client.Quit()
 }
 
 func main() {
