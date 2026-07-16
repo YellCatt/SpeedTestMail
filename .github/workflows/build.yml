@@ -1,0 +1,53 @@
+name: Build Speedtest-Notify
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-openwrt-mipsle:
+    name: Build for OpenWrt (MIPSLE) - 极路由2
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.21'
+    
+    - name: Build for MIPSLE (极路由2)
+      run: |
+        CGO_ENABLED=0 GOOS=linux GOARCH=mipsle go build -o speedtest-notify-mipsle main.go
+    
+    - name: Upload MIPSLE artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: speedtest-notify-mipsle
+        path: speedtest-notify-mipsle
+
+  build-windows:
+    name: Build for Windows
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.21'
+    
+    - name: Build for Windows (Static)
+      run: |
+        set CGO_ENABLED=0
+        set GOOS=windows
+        set GOARCH=amd64
+        go build -o speedtest-notify.exe main.go
+    
+    - name: Upload Windows artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: speedtest-notify-windows
+        path: speedtest-notify.exe
