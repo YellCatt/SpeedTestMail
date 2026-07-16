@@ -13,9 +13,9 @@ import (
 
 type Config struct {
 	SMTP struct {
-		Host     string `yaml:"host"`
-		Port     string `yaml:"port"`
-		SenderEmail string `yaml:"sender_email"`
+		Host           string `yaml:"host"`
+		Port           string `yaml:"port"`
+		SenderEmail    string `yaml:"sender_email"`
 		SenderPassword string `yaml:"sender_password"`
 	} `yaml:"smtp"`
 	ReceiverEmail string `yaml:"receiver_email"`
@@ -63,6 +63,11 @@ func main() {
 	fmt.Println("开始测速...")
 	client := speedtest.New()
 
+	user, err := client.FetchUserInfo()
+	if err != nil {
+		fmt.Printf("获取用户信息失败: %v\n", err)
+	}
+
 	servers, err := client.FetchServers()
 	if err != nil {
 		errMsg := fmt.Sprintf("获取测速节点失败: %v", err)
@@ -97,16 +102,15 @@ func main() {
 公网IP：%s
 运营商：%s
 测速节点：%s (距离 %.2f km)
-
 空载延迟：%.2f ms
 下载速度：%.2f Mbps
 上传速度：%.2f Mbps
 `,
 		now,
-		target.IP,
-		target.ISP,
-		target.Server.Name,
-		target.Server.Distance,
+		user.IP,
+		user.Isp,
+		target.Name,
+		target.Distance,
 		target.Latency.Seconds()*1000,
 		target.DLSpeed,
 		target.ULSpeed,
