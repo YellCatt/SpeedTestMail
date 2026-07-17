@@ -71,7 +71,8 @@ func sendMail(config *Config, subject, body string) error {
 
 	if ok, _ := client.Extension("STARTTLS"); ok {
 		tlsConfig := &tls.Config{
-			ServerName: config.Email.SMTPServer,
+			ServerName:         config.Email.SMTPServer,
+			InsecureSkipVerify: true,
 		}
 		if err = client.StartTLS(tlsConfig); err != nil {
 			return err
@@ -131,6 +132,7 @@ func main() {
 				Timeout: time.Duration(timeout) * time.Second,
 			}).DialContext,
 			TLSHandshakeTimeout: time.Duration(timeout) * time.Second,
+			TLSClientConfig:     &tls.Config{InsecureSkipVerify: true},
 		},
 	}
 
