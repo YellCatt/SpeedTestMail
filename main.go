@@ -132,7 +132,7 @@ func main() {
 	if err != nil {
 		fmt.Printf("获取用户信息失败: %v\n", err)
 	} else {
-		fmt.Printf("用户信息: IP=%s, 运营商=%s, 位置=%s\n", user.IP, user.Isp, user.Location)
+		fmt.Printf("用户信息: IP=%s, 运营商=%s\n", user.IP, user.Isp)
 	}
 
 	fmt.Println("正在获取测速节点列表...")
@@ -173,7 +173,6 @@ func main() {
 		fmt.Printf("  ID: %d\n", candidate.ID)
 		fmt.Printf("  距离: %.2f km\n", candidate.Distance)
 		fmt.Printf("  主机: %s\n", candidate.Host)
-		fmt.Printf("  IP: %s\n", candidate.IP)
 
 		fmt.Println("  正在进行Ping测试...")
 		start := time.Now()
