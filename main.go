@@ -147,24 +147,39 @@ func main() {
 		_ = sendMail(config, "路由器测速【失败】", errMsg)
 		return
 	}
-	target := targets[0]
 
-	fmt.Printf("选择测速节点: %s (距离 %.2f km)\n", target.Name, target.Distance)
+	fmt.Printf("发现 %d 个可用测速节点\n", len(targets))
 
-	if err = target.PingTest(nil); err != nil {
-		errMsg := fmt.Sprintf("Ping测试失败: %v", err)
-		fmt.Println(errMsg)
-		_ = sendMail(config, "路由器测速【失败】", errMsg)
-		return
+	var target *speedtest.Server
+	var lastErr error
+	maxRetries := 3
+
+	for i := 0; i < len(targets) && i < maxRetries; i++ {
+		candidate := targets[i]
+		fmt.Printf("尝试测速节点 %d/%d: %s (距离 %.2f km)\n", i+1, maxRetries, candidate.Name, candidate.Distance)
+
+		if err = candidate.PingTest(nil); err != nil {
+			lastErr = fmt.Errorf("Ping测试失败: %v", err)
+			fmt.Println(lastErr)
+			continue
+		}
+		if err = candidate.DownloadTest(); err != nil {
+			lastErr = fmt.Errorf("下载测试失败: %v", err)
+			fmt.Println(lastErr)
+			continue
+		}
+		if err = candidate.UploadTest(); err != nil {
+			lastErr = fmt.Errorf("上传测试失败: %v", err)
+			fmt.Println(lastErr)
+			continue
+		}
+
+		target = candidate
+		break
 	}
-	if err = target.DownloadTest(); err != nil {
-		errMsg := fmt.Sprintf("下载测试失败: %v", err)
-		fmt.Println(errMsg)
-		_ = sendMail(config, "路由器测速【失败】", errMsg)
-		return
-	}
-	if err = target.UploadTest(); err != nil {
-		errMsg := fmt.Sprintf("上传测试失败: %v", err)
+
+	if target == nil {
+		errMsg := fmt.Sprintf("所有节点测速失败: %v", lastErr)
 		fmt.Println(errMsg)
 		_ = sendMail(config, "路由器测速【失败】", errMsg)
 		return
