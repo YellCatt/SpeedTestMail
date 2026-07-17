@@ -127,11 +127,15 @@ func main() {
 
 	client := speedtest.New()
 
+	fmt.Println("正在获取用户信息...")
 	user, err := client.FetchUserInfo()
 	if err != nil {
 		fmt.Printf("获取用户信息失败: %v\n", err)
+	} else {
+		fmt.Printf("用户信息: IP=%s, 运营商=%s, 位置=%s\n", user.IP, user.Isp, user.Location)
 	}
 
+	fmt.Println("正在获取测速节点列表...")
 	servers, err := client.FetchServers()
 	if err != nil {
 		errMsg := fmt.Sprintf("获取测速节点失败: %v", err)
@@ -139,7 +143,9 @@ func main() {
 		_ = sendMail(config, "路由器测速【失败】", errMsg)
 		return
 	}
+	fmt.Printf("共获取到 %d 个测速节点\n", len(servers))
 
+	fmt.Println("正在筛选最优节点...")
 	targets, err := servers.FindServer([]int{})
 	if err != nil || len(targets) == 0 {
 		errMsg := fmt.Sprintf("无可用测速节点: %v", err)
@@ -149,6 +155,12 @@ func main() {
 	}
 
 	fmt.Printf("发现 %d 个可用测速节点\n", len(targets))
+	for i, s := range targets {
+		if i >= 5 {
+			break
+		}
+		fmt.Printf("  节点 %d: %s (ID:%d, 距离:%.2f km, 主机:%s)\n", i+1, s.Name, s.ID, s.Distance, s.Host)
+	}
 
 	var target *speedtest.Server
 	var lastErr error
@@ -156,23 +168,45 @@ func main() {
 
 	for i := 0; i < len(targets) && i < maxRetries; i++ {
 		candidate := targets[i]
-		fmt.Printf("尝试测速节点 %d/%d: %s (距离 %.2f km)\n", i+1, maxRetries, candidate.Name, candidate.Distance)
+		fmt.Printf("\n尝试测速节点 %d/%d:\n", i+1, maxRetries)
+		fmt.Printf("  名称: %s\n", candidate.Name)
+		fmt.Printf("  ID: %d\n", candidate.ID)
+		fmt.Printf("  距离: %.2f km\n", candidate.Distance)
+		fmt.Printf("  主机: %s\n", candidate.Host)
+		fmt.Printf("  IP: %s\n", candidate.IP)
 
+		fmt.Println("  正在进行Ping测试...")
+		start := time.Now()
 		if err = candidate.PingTest(nil); err != nil {
+			elapsed := time.Since(start)
 			lastErr = fmt.Errorf("Ping测试失败: %v", err)
-			fmt.Println(lastErr)
+			fmt.Printf("  Ping测试失败: %v (耗时: %v)\n", err, elapsed)
 			continue
 		}
+		elapsed := time.Since(start)
+		fmt.Printf("  Ping测试成功: 延迟 %.2f ms (耗时: %v)\n", candidate.Latency.Seconds()*1000, elapsed)
+
+		fmt.Println("  正在进行下载测试...")
+		start = time.Now()
 		if err = candidate.DownloadTest(); err != nil {
+			elapsed := time.Since(start)
 			lastErr = fmt.Errorf("下载测试失败: %v", err)
-			fmt.Println(lastErr)
+			fmt.Printf("  下载测试失败: %v (耗时: %v)\n", err, elapsed)
 			continue
 		}
+		elapsed = time.Since(start)
+		fmt.Printf("  下载测试成功: %.2f Mbps (耗时: %v)\n", candidate.DLSpeed, elapsed)
+
+		fmt.Println("  正在进行上传测试...")
+		start = time.Now()
 		if err = candidate.UploadTest(); err != nil {
+			elapsed := time.Since(start)
 			lastErr = fmt.Errorf("上传测试失败: %v", err)
-			fmt.Println(lastErr)
+			fmt.Printf("  上传测试失败: %v (耗时: %v)\n", err, elapsed)
 			continue
 		}
+		elapsed = time.Since(start)
+		fmt.Printf("  上传测试成功: %.2f Mbps (耗时: %v)\n", candidate.ULSpeed, elapsed)
 
 		target = candidate
 		break
