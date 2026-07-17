@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"net"
+	"net/http"
 	"net/smtp"
 	"os"
 	"strings"
@@ -114,7 +115,17 @@ func main() {
 
 	fmt.Println("开始测速...")
 	client := speedtest.New()
-	client.SetTimeout(time.Duration(timeout) * time.Second)
+
+	httpClient := &http.Client{
+		Timeout: time.Duration(timeout) * time.Second,
+		Transport: &http.Transport{
+			DialContext: (&net.Dialer{
+				Timeout: time.Duration(timeout) * time.Second,
+			}).DialContext,
+			TLSHandshakeTimeout: time.Duration(timeout) * time.Second,
+		},
+	}
+	speedtest.DefaultClient = httpClient
 
 	user, err := client.FetchUserInfo()
 	if err != nil {
