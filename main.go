@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/tls"
 	"fmt"
 	"net"
 	"net/http"
@@ -69,7 +70,10 @@ func sendMail(config *Config, subject, body string) error {
 	}
 
 	if ok, _ := client.Extension("STARTTLS"); ok {
-		if err = client.StartTLS(nil); err != nil {
+		tlsConfig := &tls.Config{
+			ServerName: config.Email.SMTPServer,
+		}
+		if err = client.StartTLS(tlsConfig); err != nil {
 			return err
 		}
 	}
