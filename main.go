@@ -21,6 +21,7 @@ type Config struct {
 		SMTPServer string `yaml:"smtp_server"`
 		SMTPPort   int    `yaml:"smtp_port"`
 	} `yaml:"email"`
+	Timeout int `yaml:"timeout"`
 }
 
 func loadConfig(path string) (*Config, error) {
@@ -105,8 +106,15 @@ func main() {
 		return
 	}
 
+	timeout := config.Timeout
+	if timeout <= 0 {
+		timeout = 30
+	}
+	fmt.Printf("设置超时时间: %d 秒\n", timeout)
+
 	fmt.Println("开始测速...")
 	client := speedtest.New()
+	client.SetTimeout(time.Duration(timeout) * time.Second)
 
 	user, err := client.FetchUserInfo()
 	if err != nil {
@@ -130,14 +138,25 @@ func main() {
 	}
 	target := targets[0]
 
+	fmt.Printf("选择测速节点: %s (距离 %.2f km)\n", target.Name, target.Distance)
+
 	if err = target.PingTest(nil); err != nil {
-		panic(err)
+		errMsg := fmt.Sprintf("Ping测试失败: %v", err)
+		fmt.Println(errMsg)
+		_ = sendMail(config, "路由器测速【失败】", errMsg)
+		return
 	}
 	if err = target.DownloadTest(); err != nil {
-		panic(err)
+		errMsg := fmt.Sprintf("下载测试失败: %v", err)
+		fmt.Println(errMsg)
+		_ = sendMail(config, "路由器测速【失败】", errMsg)
+		return
 	}
 	if err = target.UploadTest(); err != nil {
-		panic(err)
+		errMsg := fmt.Sprintf("上传测试失败: %v", err)
+		fmt.Println(errMsg)
+		_ = sendMail(config, "路由器测速【失败】", errMsg)
+		return
 	}
 
 	now := time.Now().Format("2006-01-02 15:04:05")

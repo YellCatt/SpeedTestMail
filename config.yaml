@@ -5,3 +5,4 @@ email:
   auth_code: "gpfruabgjebubdad"
   smtp_server: "smtp.qq.com"
   smtp_port: 587
+timeout: 30
