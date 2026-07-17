@@ -117,6 +117,10 @@ func main() {
 		return
 	}
 
+	http.DefaultTransport = &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+
 	timeout := config.Timeout
 	if timeout <= 0 {
 		timeout = 30
