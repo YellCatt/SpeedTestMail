@@ -58,15 +58,20 @@ func sendMail(config *Config, subject, body string) error {
 
 	addr := fmt.Sprintf("%s:%d", config.Email.SMTPServer, config.Email.SMTPPort)
 
-	conn, err := net.Dial("tcp", addr)
+	client, err := smtp.Dial(addr)
 	if err != nil {
 		return err
 	}
-	defer conn.Close()
+	defer client.Close()
 
-	client, err := smtp.NewClient(conn, config.Email.SMTPServer)
-	if err != nil {
+	if err = client.Hello("localhost"); err != nil {
 		return err
+	}
+
+	if ok, _ := client.Extension("STARTTLS"); ok {
+		if err = client.StartTLS(nil); err != nil {
+			return err
+		}
 	}
 
 	if err = client.Auth(auth); err != nil {
@@ -220,6 +225,9 @@ func main() {
 
 	now := time.Now().Format("2006-01-02 15:04:05")
 
+	dlMbps := target.DLSpeed / 1000000 * 8
+	ulMbps := target.ULSpeed / 1000000 * 8
+
 	body := fmt.Sprintf(`===== 路由器测速报告 =====
 测试时间：%s
 公网IP：%s
@@ -235,8 +243,8 @@ func main() {
 		target.Name,
 		target.Distance,
 		target.Latency.Seconds()*1000,
-		target.DLSpeed,
-		target.ULSpeed,
+		dlMbps,
+		ulMbps,
 	)
 
 	fmt.Println(body)
