@@ -86,6 +86,8 @@ jobs:
           echo "使用固定版本tag: $VERSION"
 
           gh release delete "$VERSION" --yes 2>/dev/null || true
+          git tag -d "$VERSION" 2>/dev/null || true
+          git push origin ":$VERSION" 2>/dev/null || true
 
           gh release create "$VERSION" \
             --title "Development Build (Latest)" \
