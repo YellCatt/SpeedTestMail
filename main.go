@@ -114,9 +114,8 @@ func main() {
 	fmt.Printf("设置超时时间: %d 秒\n", timeout)
 
 	fmt.Println("开始测速...")
-	client := speedtest.New()
 
-	httpClient := &http.Client{
+	http.DefaultClient = &http.Client{
 		Timeout: time.Duration(timeout) * time.Second,
 		Transport: &http.Transport{
 			DialContext: (&net.Dialer{
@@ -125,7 +124,8 @@ func main() {
 			TLSHandshakeTimeout: time.Duration(timeout) * time.Second,
 		},
 	}
-	speedtest.DefaultClient = httpClient
+
+	client := speedtest.New()
 
 	user, err := client.FetchUserInfo()
 	if err != nil {
